@@ -22,9 +22,17 @@ class SciSciNetAPI:
         self.email = email
         self.session = requests.Session()
 
+        # Set required User-Agent header
+        self.session.headers.update({
+            'User-Agent': 'SciSciNet-Explorer/1.0 (https://github.com/sciscinet-explorer; mailto:research@example.com)'
+        })
+
         # Set up polite pool if email provided
         if email:
             self.session.params = {'mailto': email}
+            self.session.headers.update({
+                'User-Agent': f'SciSciNet-Explorer/1.0 (https://github.com/sciscinet-explorer; mailto:{email})'
+            })
 
     def search_works(self, query: str, page: int = 1, per_page: int = 25,
                      filters: Optional[Dict] = None) -> Dict:
