@@ -38,3 +38,9 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# HTML Saver output directories
+saved_html/
+demo_output/
+test_html/
+test_output/
