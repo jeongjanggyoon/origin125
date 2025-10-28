@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Wave Visualization - 3D Stock Index Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 350px;
+            backdrop-filter: blur(10px);
+        }
+
+        #info-panel h1 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .market-group {
+            margin-bottom: 15px;
+        }
+
+        .market-group h2 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #ffaa00;
+            border-bottom: 1px solid rgba(255, 170, 0, 0.3);
+            padding-bottom: 4px;
+        }
+
+        .index-item {
+            font-size: 12px;
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .positive {
+            color: #00ff88;
+        }
+
+        .negative {
+            color: #ff4466;
+        }
+
+        .neutral {
+            color: #ffdd44;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-item {
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+
+        .control-item input[type="range"] {
+            width: 200px;
+        }
+
+        .control-item button {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+        }
+
+        .control-item button:hover {
+            background: rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        #legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            display: none;
+            font-size: 11px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="info-panel">
+        <h1>Market Wave Visualization</h1>
+        <div class="market-group">
+            <h2>US Markets</h2>
+            <div class="index-item">
+                <span>S&P 500:</span>
+                <span class="positive">6,850 (+0.85%)</span>
+            </div>
+            <div class="index-item">
+                <span>Nasdaq:</span>
+                <span class="positive">21,108 (+0.24%)</span>
+            </div>
+            <div class="index-item">
+                <span>Dow Jones:</span>
+                <span class="positive">44,901 (+0.12%)</span>
+            </div>
+        </div>
+
+        <div class="market-group">
+            <h2>Korean Markets</h2>
+            <div class="index-item">
+                <span>KOSPI:</span>
+                <span class="positive">3,942 (+2.50%)</span>
+            </div>
+            <div class="index-item">
+                <span>KOSDAQ:</span>
+                <span class="positive">872 (+1.85%)</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #00ffff;"></div>
+            <span>Strong Rise (>2%)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffdd44;"></div>
+            <span>Moderate Rise (0-2%)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ff4466;"></div>
+            <span>Decline (<0%)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffffff;"></div>
+            <span>Index (Large)</span>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-item">
+            <label>Wave Speed: <span id="speed-value">1.0</span></label>
+            <input type="range" id="wave-speed" min="0.1" max="3" step="0.1" value="1.0">
+        </div>
+        <div class="control-item">
+            <label>Wave Intensity: <span id="intensity-value">1.0</span></label>
+            <input type="range" id="wave-intensity" min="0.1" max="3" step="0.1" value="1.0">
+        </div>
+        <div class="control-item">
+            <button id="toggle-animation">Pause Animation</button>
+        </div>
+        <div class="control-item">
+            <button id="reset-camera">Reset Camera</button>
+        </div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== Market Data (Mock/Dummy) ==========
+        const marketData = {
+            us: {
+                indices: [
+                    { name: 'S&P 500', value: 6850, change: 0.85 },
+                    { name: 'Nasdaq', value: 21108, change: 0.24 },
+                    { name: 'Dow Jones', value: 44901, change: 0.12 }
+                ],
+                stocks: [
+                    { name: 'Nvidia', change: -0.14, index: 'Nasdaq' },
+                    { name: 'Tesla', change: 1.23, index: 'Nasdaq' },
+                    { name: 'Amazon', change: 0.87, index: 'S&P 500' },
+                    { name: 'Apple', change: 0.45, index: 'Nasdaq' },
+                    { name: 'Microsoft', change: 0.92, index: 'S&P 500' },
+                    { name: 'Meta', change: -0.32, index: 'Nasdaq' },
+                    { name: 'Alphabet', change: 0.67, index: 'S&P 500' },
+                    { name: 'AMD', change: 2.34, index: 'Nasdaq' },
+                    { name: 'Netflix', change: -1.12, index: 'S&P 500' },
+                    { name: 'Boeing', change: -0.89, index: 'Dow Jones' }
+                ]
+            },
+            korea: {
+                indices: [
+                    { name: 'KOSPI', value: 3942, change: 2.50 },
+                    { name: 'KOSDAQ', value: 872, change: 1.85 }
+                ],
+                stocks: [
+                    { name: 'SK하이닉스', change: 3.13, index: 'KOSPI' },
+                    { name: '삼성전자', change: 2.45, index: 'KOSPI' },
+                    { name: 'LG에너지솔루션', change: 1.87, index: 'KOSPI' },
+                    { name: '현대차', change: 0.93, index: 'KOSPI' },
+                    { name: 'POSCO홀딩스', change: -0.45, index: 'KOSPI' },
+                    { name: 'NAVER', change: 2.12, index: 'KOSDAQ' },
+                    { name: '카카오', change: 1.56, index: 'KOSDAQ' },
+                    { name: 'LG전자', change: 0.78, index: 'KOSPI' },
+                    { name: '기아', change: 1.34, index: 'KOSPI' },
+                    { name: '셀트리온', change: -1.23, index: 'KOSPI' }
+                ]
+            }
+        };
+
+        // ========== Scene Setup ==========
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000510);
+        scene.fog = new THREE.FogExp2(0x000510, 0.0008);
+
+        const container = document.getElementById('canvas-container');
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            2000
+        );
+        camera.position.set(0, 50, 150);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 300;
+        controls.minDistance = 20;
+
+        // ========== Lighting ==========
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x00ffff, 1, 500);
+        pointLight1.position.set(50, 50, 50);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff00ff, 0.8, 500);
+        pointLight2.position.set(-50, -50, -50);
+        scene.add(pointLight2);
+
+        // ========== Perlin Noise Simulation ==========
+        function noise(x, y, z) {
+            // Simple pseudo-random noise function
+            const n = Math.sin(x * 12.9898 + y * 78.233 + z * 45.543) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        function perlinNoise(x, y, z) {
+            const X = Math.floor(x) & 255;
+            const Y = Math.floor(y) & 255;
+            const Z = Math.floor(z) & 255;
+
+            x -= Math.floor(x);
+            y -= Math.floor(y);
+            z -= Math.floor(z);
+
+            const u = fade(x);
+            const v = fade(y);
+            const w = fade(z);
+
+            const a = noise(X, Y, Z) + x;
+            const b = noise(X + 1, Y, Z) + x - 1;
+
+            return lerp(w, lerp(v, lerp(u, a, b), lerp(u, a, b)),
+                           lerp(v, lerp(u, a, b), lerp(u, a, b)));
+        }
+
+        function fade(t) {
+            return t * t * t * (t * (t * 6 - 15) + 10);
+        }
+
+        function lerp(t, a, b) {
+            return a + t * (b - a);
+        }
+
+        // ========== Helper Functions ==========
+        function getColorByChange(change) {
+            if (change > 2) return new THREE.Color(0x00ffff); // Cyan - Strong rise
+            if (change > 0) return new THREE.Color(0xffdd44); // Yellow - Moderate rise
+            return new THREE.Color(0xff4466); // Red - Decline
+        }
+
+        function getSizeByChange(change, isIndex = false) {
+            const baseSize = isIndex ? 3.0 : 1.5;
+            return baseSize + Math.abs(change) * 0.3;
+        }
+
+        // ========== Particle Systems ==========
+        class MarketEntity {
+            constructor(name, change, position, isIndex = false, market = 'us') {
+                this.name = name;
+                this.change = change;
+                this.position = position.clone();
+                this.originalPosition = position.clone();
+                this.isIndex = isIndex;
+                this.market = market;
+
+                // Main sphere
+                const size = getSizeByChange(change, isIndex);
+                const geometry = new THREE.SphereGeometry(size, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: getColorByChange(change),
+                    emissive: getColorByChange(change),
+                    emissiveIntensity: 0.5,
+                    transparent: true,
+                    opacity: 0.8,
+                    shininess: 100
+                });
+
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(position);
+                this.mesh.userData = { name, change, isIndex };
+
+                // Particle trail
+                const particleCount = isIndex ? 800 : 400;
+                const particles = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+
+                const color = getColorByChange(change);
+
+                for (let i = 0; i < particleCount; i++) {
+                    const radius = (isIndex ? 15 : 8) * Math.random();
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+
+                    positions[i * 3] = position.x + radius * Math.sin(phi) * Math.cos(theta);
+                    positions[i * 3 + 1] = position.y + radius * Math.sin(phi) * Math.sin(theta);
+                    positions[i * 3 + 2] = position.z + radius * Math.cos(phi);
+
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                }
+
+                particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const particleMaterial = new THREE.PointsMaterial({
+                    size: isIndex ? 0.8 : 0.5,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                this.particles = new THREE.Points(particles, particleMaterial);
+                this.particlePositions = positions;
+                scene.add(this.mesh);
+                scene.add(this.particles);
+            }
+
+            update(time, waveSpeed, waveIntensity) {
+                // Wave motion using Perlin noise
+                const noiseScale = 0.05;
+                const waveAmplitude = (this.isIndex ? 5 : 3) * waveIntensity;
+
+                const noiseX = perlinNoise(
+                    this.originalPosition.x * noiseScale,
+                    this.originalPosition.y * noiseScale,
+                    time * waveSpeed * 0.001
+                );
+                const noiseY = perlinNoise(
+                    this.originalPosition.y * noiseScale,
+                    this.originalPosition.z * noiseScale,
+                    time * waveSpeed * 0.001 + 100
+                );
+                const noiseZ = perlinNoise(
+                    this.originalPosition.z * noiseScale,
+                    this.originalPosition.x * noiseScale,
+                    time * waveSpeed * 0.001 + 200
+                );
+
+                this.mesh.position.x = this.originalPosition.x + noiseX * waveAmplitude;
+                this.mesh.position.y = this.originalPosition.y + noiseY * waveAmplitude;
+                this.mesh.position.z = this.originalPosition.z + noiseZ * waveAmplitude;
+
+                // Rotate main sphere
+                this.mesh.rotation.y += 0.005 * waveSpeed;
+                this.mesh.rotation.x += 0.003 * waveSpeed;
+
+                // Animate particles
+                const positions = this.particlePositions;
+                const particleCount = positions.length / 3;
+
+                for (let i = 0; i < particleCount; i++) {
+                    const i3 = i * 3;
+
+                    // Spiral motion
+                    const angle = time * 0.0005 * waveSpeed + i * 0.01;
+                    const radius = (this.isIndex ? 15 : 8);
+                    const verticalOffset = Math.sin(time * 0.001 * waveSpeed + i * 0.1) * 5;
+
+                    const localX = Math.cos(angle) * radius;
+                    const localZ = Math.sin(angle) * radius;
+
+                    positions[i3] = this.mesh.position.x + localX +
+                                    Math.sin(time * 0.002 + i) * 2;
+                    positions[i3 + 1] = this.mesh.position.y + verticalOffset;
+                    positions[i3 + 2] = this.mesh.position.z + localZ +
+                                        Math.cos(time * 0.002 + i) * 2;
+                }
+
+                this.particles.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // ========== Create Market Entities ==========
+        const entities = [];
+
+        // US Market - Left side
+        marketData.us.indices.forEach((index, i) => {
+            const position = new THREE.Vector3(-60, i * 30 - 30, 0);
+            entities.push(new MarketEntity(index.name, index.change, position, true, 'us'));
+        });
+
+        marketData.us.stocks.forEach((stock, i) => {
+            const x = -80 + (i % 5) * 8;
+            const y = Math.floor(i / 5) * 25 - 20;
+            const z = -20 + (i % 3) * 10;
+            const position = new THREE.Vector3(x, y, z);
+            entities.push(new MarketEntity(stock.name, stock.change, position, false, 'us'));
+        });
+
+        // Korean Market - Right side
+        marketData.korea.indices.forEach((index, i) => {
+            const position = new THREE.Vector3(60, i * 30 - 15, 0);
+            entities.push(new MarketEntity(index.name, index.change, position, true, 'korea'));
+        });
+
+        marketData.korea.stocks.forEach((stock, i) => {
+            const x = 80 - (i % 5) * 8;
+            const y = Math.floor(i / 5) * 25 - 20;
+            const z = -20 + (i % 3) * 10;
+            const position = new THREE.Vector3(x, y, z);
+            entities.push(new MarketEntity(stock.name, stock.change, position, false, 'korea'));
+        });
+
+        // ========== Background Stars ==========
+        const starGeometry = new THREE.BufferGeometry();
+        const starVertices = [];
+
+        for (let i = 0; i < 5000; i++) {
+            const x = (Math.random() - 0.5) * 1000;
+            const y = (Math.random() - 0.5) * 1000;
+            const z = (Math.random() - 0.5) * 1000;
+            starVertices.push(x, y, z);
+        }
+
+        starGeometry.setAttribute('position',
+            new THREE.Float32BufferAttribute(starVertices, 3));
+
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.5,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        // ========== Nebula Effect ==========
+        const nebulaGeometry = new THREE.BufferGeometry();
+        const nebulaVertices = [];
+        const nebulaColors = [];
+
+        for (let i = 0; i < 2000; i++) {
+            const x = (Math.random() - 0.5) * 400;
+            const y = (Math.random() - 0.5) * 400;
+            const z = (Math.random() - 0.5) * 400;
+            nebulaVertices.push(x, y, z);
+
+            const color = new THREE.Color();
+            color.setHSL(Math.random() * 0.3 + 0.5, 0.5, 0.5);
+            nebulaColors.push(color.r, color.g, color.b);
+        }
+
+        nebulaGeometry.setAttribute('position',
+            new THREE.Float32BufferAttribute(nebulaVertices, 3));
+        nebulaGeometry.setAttribute('color',
+            new THREE.Float32BufferAttribute(nebulaColors, 3));
+
+        const nebulaMaterial = new THREE.PointsMaterial({
+            size: 3,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.15,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const nebula = new THREE.Points(nebulaGeometry, nebulaMaterial);
+        scene.add(nebula);
+
+        // ========== Controls ==========
+        let waveSpeed = 1.0;
+        let waveIntensity = 1.0;
+        let animationPaused = false;
+
+        document.getElementById('wave-speed').addEventListener('input', (e) => {
+            waveSpeed = parseFloat(e.target.value);
+            document.getElementById('speed-value').textContent = waveSpeed.toFixed(1);
+        });
+
+        document.getElementById('wave-intensity').addEventListener('input', (e) => {
+            waveIntensity = parseFloat(e.target.value);
+            document.getElementById('intensity-value').textContent = waveIntensity.toFixed(1);
+        });
+
+        document.getElementById('toggle-animation').addEventListener('click', (e) => {
+            animationPaused = !animationPaused;
+            e.target.textContent = animationPaused ? 'Resume Animation' : 'Pause Animation';
+        });
+
+        document.getElementById('reset-camera').addEventListener('click', () => {
+            camera.position.set(0, 50, 150);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+
+        // ========== Raycaster for Hover ==========
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const tooltip = document.getElementById('tooltip');
+
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            const meshes = entities.map(e => e.mesh);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                const data = obj.userData;
+
+                tooltip.style.display = 'block';
+                tooltip.style.left = event.clientX + 15 + 'px';
+                tooltip.style.top = event.clientY + 15 + 'px';
+                tooltip.innerHTML = `
+                    <strong>${data.name}</strong><br>
+                    Change: <span style="color: ${data.change >= 0 ? '#00ff88' : '#ff4466'}">
+                        ${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%
+                    </span><br>
+                    Type: ${data.isIndex ? 'Index' : 'Stock'}
+                `;
+
+                renderer.domElement.style.cursor = 'pointer';
+            } else {
+                tooltip.style.display = 'none';
+                renderer.domElement.style.cursor = 'default';
+            }
+        });
+
+        // ========== Animation Loop ==========
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!animationPaused) {
+                time += 16; // ~60fps
+
+                // Update entities
+                entities.forEach(entity => {
+                    entity.update(time, waveSpeed, waveIntensity);
+                });
+
+                // Rotate background stars slowly
+                stars.rotation.y += 0.0001 * waveSpeed;
+
+                // Animate nebula
+                nebula.rotation.x += 0.0002 * waveSpeed;
+                nebula.rotation.y += 0.0003 * waveSpeed;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // ========== Window Resize ==========
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ========== Start Animation ==========
+        animate();
+
+        console.log('Market Wave Visualization initialized');
+        console.log(`Total entities: ${entities.length}`);
+    </script>
+</body>
+</html>
