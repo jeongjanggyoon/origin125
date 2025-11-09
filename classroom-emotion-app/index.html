@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 반 감정 대시보드</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 최상단 네비게이션 바 -->
+    <nav class="navbar">
+        <div class="nav-item">
+            <span class="nav-icon">📅</span>
+            <span id="date" class="nav-text">날짜</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">☀️</span>
+            <span id="weather" class="nav-text">맑음 20°C</span>
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">⏰</span>
+            <span id="time" class="nav-text">시간</span>
+        </div>
+        <div class="nav-item noise-meter">
+            <span class="nav-icon">🔊</span>
+            <span class="nav-text">소음: <span id="noise-level">0</span> dB</span>
+            <div class="noise-bar">
+                <div id="noise-fill" class="noise-fill"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 탭 메뉴 -->
+    <div class="tab-menu">
+        <button class="tab-button active" data-tab="tab1">🎭 감정 선택</button>
+        <button class="tab-button" data-tab="tab2">📊 반 상황</button>
+        <button class="tab-button" data-tab="tab3">🎨 감정 세계</button>
+        <button class="tab-button" data-tab="tab4">⭐ 오늘의 기록</button>
+    </div>
+
+    <!-- 탭 컨텐츠 -->
+    <div class="tab-content">
+        <!-- 탭1: 감정 선택 -->
+        <div id="tab1" class="tab-pane active">
+            <div class="emotion-selector">
+                <h2>오늘의 기분을 선택해주세요!</h2>
+                <div class="students-grid">
+                    <!-- 20명의 학생 버튼이 동적으로 생성됨 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭2: 반 상황 대시보드 -->
+        <div id="tab2" class="tab-pane">
+            <h2>우리 반 감정 현황</h2>
+            <div class="dashboard-container">
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-icon">😊</div>
+                        <div class="stat-label">좋은 기분</div>
+                        <div class="stat-value" id="positive-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">😐</div>
+                        <div class="stat-label">보통</div>
+                        <div class="stat-value" id="neutral-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">😢</div>
+                        <div class="stat-label">힘든 기분</div>
+                        <div class="stat-value" id="negative-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❓</div>
+                        <div class="stat-label">미선택</div>
+                        <div class="stat-value" id="unselected-count">20</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+
+                <div class="emotion-breakdown">
+                    <h3>세부 감정 분포</h3>
+                    <div id="emotion-details"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭3: 감정 애니메이션 -->
+        <div id="tab3" class="tab-pane">
+            <h2>감정 세계에 오신 것을 환영합니다! 🌈</h2>
+            <div class="animation-container" id="emotion-world">
+                <!-- 학생들이 감정에 따라 움직이는 애니메이션 -->
+            </div>
+        </div>
+
+        <!-- 탭4: 일일 기록 & 칭찬 -->
+        <div id="tab4" class="tab-pane">
+            <h2>오늘의 우리 반 ⭐</h2>
+            <div class="daily-record">
+                <div class="record-section">
+                    <h3>📈 오늘의 감정 변화</h3>
+                    <canvas id="timelineChart"></canvas>
+                </div>
+
+                <div class="record-section">
+                    <h3>🌟 칭찬 릴레이</h3>
+                    <div class="praise-container">
+                        <div id="praise-messages" class="praise-messages">
+                            <!-- 랜덤 칭찬 메시지가 표시됨 -->
+                        </div>
+                        <button class="btn-large" onclick="showRandomPraise()">칭찬 받기! 🎉</button>
+                    </div>
+                </div>
+
+                <div class="record-section">
+                    <h3>💝 선생님의 한마디</h3>
+                    <textarea id="teacher-message" class="teacher-input" placeholder="오늘 우리 반 친구들에게 하고 싶은 말을 써주세요..."></textarea>
+                    <button class="btn-large" onclick="saveTeacherMessage()">저장하기</button>
+                </div>
+
+                <div class="record-section">
+                    <h3>📊 주간 통계</h3>
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 감정 선택 모달 -->
+    <div id="emotion-modal" class="modal">
+        <div class="modal-content">
+            <h2><span id="modal-student-number"></span>번 친구의 기분은?</h2>
+            <div class="emotion-options">
+                <button class="emotion-btn" data-emotion="😊" data-type="positive">😊 행복해요</button>
+                <button class="emotion-btn" data-emotion="😄" data-type="positive">😄 기뻐요</button>
+                <button class="emotion-btn" data-emotion="🥰" data-type="positive">🥰 사랑해요</button>
+                <button class="emotion-btn" data-emotion="😎" data-type="positive">😎 멋져요</button>
+                <button class="emotion-btn" data-emotion="🤗" data-type="positive">🤗 포근해요</button>
+
+                <button class="emotion-btn" data-emotion="😐" data-type="neutral">😐 그냥 그래요</button>
+                <button class="emotion-btn" data-emotion="🤔" data-type="neutral">🤔 고민돼요</button>
+                <button class="emotion-btn" data-emotion="😑" data-type="neutral">😑 무표정</button>
+                <button class="emotion-btn" data-emotion="😶" data-type="neutral">😶 조용해요</button>
+
+                <button class="emotion-btn" data-emotion="😢" data-type="negative">😢 슬퍼요</button>
+                <button class="emotion-btn" data-emotion="😭" data-type="negative">😭 많이 슬퍼요</button>
+                <button class="emotion-btn" data-emotion="😠" data-type="negative">😠 화나요</button>
+                <button class="emotion-btn" data-emotion="😰" data-type="negative">😰 불안해요</button>
+                <button class="emotion-btn" data-emotion="😫" data-type="negative">😫 힘들어요</button>
+                <button class="emotion-btn" data-emotion="🤒" data-type="negative">🤒 아파요</button>
+            </div>
+            <button class="modal-close" onclick="closeModal()">닫기</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
